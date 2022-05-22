@@ -11,18 +11,18 @@ public class PlayerController : MonoBehaviour
     public float destroySpeed;
     public float health;
     public int sensiv;
-    public int gravity;
     public GameObject laserBeam;
     public GameObject planet;
     public Slider healthBar;
 
-    private bool onOrbit;
+    private bool onGround;
+    private int bodyMass;
     private Rigidbody rb;
 
     // Start is called before the first frame update
     void Start()
     {
-        onOrbit = true;
+        bodyMass = 30;
         rb = GetComponent<Rigidbody>();
     }
 
@@ -31,14 +31,14 @@ public class PlayerController : MonoBehaviour
     {
         float mvx = Input.GetAxisRaw("Horizontal");
         float mvy = 0f;
-        float mvz = Input.GetAxisRaw("Vertical") + 0.2f;
-        if (Input.GetKey(KeyCode.LeftControl))
+        float mvz = Input.GetAxisRaw("Vertical")+0.2f;
+        if (Input.GetKey(KeyCode.LeftControl) && !onGround)
         {
-            mvy -= 1f;
+            mvy -= 1.5f;
         }
         if (Input.GetKey(KeyCode.LeftShift))
         {
-            mvy += 1f;
+            mvy += 1.5f;
         }
         /*if (rb.velocity.magnitude > topspeed)
         {
@@ -59,12 +59,16 @@ public class PlayerController : MonoBehaviour
         {
             rtz -= 1;
         }
-        Vector3 rt = new Vector3(rty*2, rtx, rtz) * sensiv * Time.deltaTime;
-        transform.Rotate(rt);
-
-        if (onOrbit)
+        if (!onGround)
         {
-            Vector3 grav = (planet.transform.position - transform.position).normalized * gravity;
+            Vector3 rt = new Vector3(rty * 2, rtx, rtz) * sensiv * Time.deltaTime;
+            transform.Rotate(rt);
+        }
+        
+
+        if (bodyMass > 0)
+        {
+            Vector3 grav = (planet.transform.position - transform.position).normalized * bodyMass;
             Physics.gravity = grav;
         }
 
@@ -72,6 +76,7 @@ public class PlayerController : MonoBehaviour
         {
             var lsrBeamObj = Instantiate(laserBeam, transform.position, Quaternion.identity) as GameObject;
             lsrBeamObj.GetComponent<Rigidbody>().velocity = transform.forward.normalized * (rb.velocity.magnitude + 100);
+            
         }
     }
 
@@ -79,7 +84,13 @@ public class PlayerController : MonoBehaviour
     {
         if (other.tag == "Planet")
         {
-            onOrbit = true;
+            bodyMass = 20;
+            planet = other.gameObject;
+        }
+        if (other.tag == "Star")
+        {
+            bodyMass = 35;
+            planet = other.gameObject;
         }
     }
 
@@ -87,8 +98,13 @@ public class PlayerController : MonoBehaviour
     {
         if (other.tag == "Planet")
         {
-            Physics.gravity = new Vector3(0f,0f,0f);
-            onOrbit = false;
+            Physics.gravity = new Vector3(0f, 0f, 0f);
+            bodyMass = 0;
+        }
+        if (other.tag == "Star")
+        {
+            Physics.gravity = new Vector3(0f, 0f, 0f);
+            bodyMass = 0;
         }
     }
 
@@ -96,6 +112,7 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.collider.tag == "Planet")
         {
+            onGround = true;
             if (rb.velocity.magnitude > destroySpeed)
             {
                 health -= rb.velocity.magnitude - destroySpeed;
@@ -105,6 +122,27 @@ public class PlayerController : MonoBehaviour
                     this.gameObject.SetActive(false);
                 }
             }
+        }
+        if (collision.collider.tag == "Star")
+        {
+            this.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.collider.tag == "Planet")
+        {
+            onGround = false;
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (collision.collider.tag == "Planet")
+        {
+            
+            transform.rotation = Quaternion.FromToRotation(transform.up, -Physics.gravity) * transform.rotation;
         }
     }
 }
