@@ -6,6 +6,9 @@ TagManager:
   tags:
   - Planet
   - Star
+  - Enemy
+  - Projectile
+  - EnemyProjectile
   layers:
   - Default
   - TransparentFX
